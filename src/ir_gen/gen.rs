@@ -1,8 +1,9 @@
 use koopa::front::ast::*;
 use koopa::ir::builder_traits::{BasicBlockBuilder, LocalInstBuilder, ValueBuilder};
-use koopa::ir::{FunctionData, Program, Type};
+use koopa::ir::{BinaryOp, FunctionData, Program, Type, Value};
 
 use crate::ast::*;
+use crate::ast::Stmt::Return;
 
 pub trait Generate {
     fn generate(&self, program: &mut Program);
@@ -42,46 +43,66 @@ impl Generate for FuncDef {
 
 
 
-impl Compile for Stmt {
-    fn compile(&self, func_data: &mut FunctionData) {
+impl Stmt {
+    fn compile(&self, func_data: &mut FunctionData, insts :&mut Vec<Value>) {
         match self {
             Stmt::Return(exp) => {
-                exp.compile(func_data);
+                exp.compile(func_data, insts);
             }
         }
     }
 }
 
-impl Compile for Exp {
-    fn compile(&self, func_data: &mut FunctionData) {
+impl Exp {
+    fn compile(&self, func_data: &mut FunctionData, insts :&mut Vec<Value>) {
         match self {
             Exp::UnaryExp(exp) => {
-                exp.compile(func_data);
+                exp.compile(func_data, insts);
             }
         }
     }
 }
 
-impl Compile for UnaryExp {
-    fn compile(&self, func_data: &mut FunctionData) {
+impl UnaryExp {
+    fn compile(&self, func_data: &mut FunctionData, insts :&mut Vec<Value>) {
         match self {
-            UnaryExp::PrimaryExp(primary_exp) => primary_exp.compile(func_data),
+            UnaryExp::PrimaryExp(primary_exp) => match primary_exp {
+                PrimaryExp::Expression(exp) => {}
+                PrimaryExp::Number(n) => {}
+            },
             UnaryExp::UnaryOp(unary_op, unary_exp) => {
                 match unary_op {
-                    UnaryOp::Add => ,
-                    UnaryOp::Minus => todo!(),
-                    UnaryOp::Not => todo!(),
+                    UnaryOp::Add => (),
+                    UnaryOp::Minus => {
+                        let l_value = func_data.dfg_mut().new_value().integer(unary_exp.);
+                        let r_value = func_data.dfg_mut().new_value().integer(0);
+                        let inst = func_data.dfg_mut().new_value().binary(BinaryOp::Sub, l_value, r_value);
+                        insts.push(inst);
+                    },
+                    UnaryOp::Not => {
+                        let l_value = func_data.dfg_mut().new_value().integer(unary_exp.);
+                        let r_value = func_data.dfg_mut().new_value().integer(0);
+                        let inst = func_data.dfg_mut().new_value().binary(BinaryOp::Eq, l_value, r_value);
+                        insts.push(inst);
+                    }
                 }
             },
         }
     }
 }
 
-impl Compile for PrimaryExp {
-    fn compile(&self, func_data: &mut FunctionData) {
+impl PrimaryExp {
+    fn compile(&self, func_data: &mut FunctionData, insts :&mut Vec<Value>) -> Value {
         match self {
             PrimaryExp::Expression(exp) => exp.compile(func_data),
-            PrimaryExp::Number(n) => ,
+            PrimaryExp::Number(n) => return *n,
         }
     }
+}
+
+pub enum ASTType {
+    Number(i32),
+    Array(Box<Type>, i32),
+    Pointer,
+    Function
 }
